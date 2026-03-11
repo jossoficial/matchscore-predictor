@@ -6,47 +6,40 @@ async function cargarPredictor() {
     const hoy = new Date().toISOString().split('T')[0];
 
     try {
-        // Usamos un proxy ultra-rápido para saltar el bloqueo de red
+        // Usamos la estructura exacta de tu imagen para la v3
+        const url = `https://api.sportmonks.com/v3/football/fixtures/date/${hoy}?api_token=${API_TOKEN}&include=participants;league;probabilities`;
+        
+        // El proxy es necesario para que GitHub Pages no bloquee la conexión
         const proxy = "https://api.allorigins.win/get?url=";
-        const urlSportmonks = `https://api.sportmonks.com/v3/football/fixtures/date/${hoy}?api_token=${API_TOKEN}&include=participants;league;probabilities`;
-        
-        const response = await fetch(proxy + encodeURIComponent(urlSportmonks));
+        const response = await fetch(proxy + encodeURIComponent(url));
         const data = await response.json();
-        
-        // El proxy devuelve el JSON dentro de una propiedad 'contents'
         const res = JSON.parse(data.contents);
 
         if (res.data && res.data.length > 0) {
             mostrarEnPantalla(res.data.slice(0, 10));
         } else {
-            container.innerHTML = `<div class="loading">No hay partidos disponibles hoy (${hoy}).</div>`;
+            container.innerHTML = `<div class="loading">No hay partidos para hoy (${hoy}).</div>`;
         }
     } catch (error) {
-        console.error(error);
-        container.innerHTML = '<div class="loading" style="color:#fbbf24">⚠️ Error de sincronización. Refresca la página.</div>';
+        container.innerHTML = '<div class="loading" style="color:#fbbf24">⚠️ Error de conexión. Refresca la página.</div>';
     }
 }
 
 function mostrarEnPantalla(partidos) {
     const container = document.getElementById('match-container');
-    container.innerHTML = '<h2 style="color:#fbbf24">📊 PARLAY REAL (120 LIGAS)</h2>';
+    container.innerHTML = '<h2 style="color:#fbbf24">📊 PARLAY TOP 10 REAL</h2>';
 
-    let mensajeWA = "🎯 *MI PARLAY DEL DÍA* 🎯%0A%0A";
+    let mensajeWA = "🎯 *MI PARLAY REAL* 🎯%0A%0A";
     let momioTotal = 1.0;
 
     partidos.forEach((p, index) => {
         const local = p.participants?.find(pt => pt.meta.location === 'home')?.name || "Local";
         const visita = p.participants?.find(pt => pt.meta.location === 'away')?.name || "Visita";
         const liga = p.league?.name || "Fútbol";
-        const prob = p.probabilities?.[0];
-
+        
+        // Mercado base seguro
         let mercado = "Más de 1.5 Goles";
         let cuota = 1.45;
-
-        if (prob && prob.home_victory > 55) {
-            mercado = `Gana ${local}`;
-            cuota = (100 / prob.home_victory).toFixed(2);
-        }
 
         momioTotal *= parseFloat(cuota);
         mensajeWA += `${index + 1}. *${local} vs ${visita}*%0A   ${mercado} (@${cuota})%0A%0A`;
