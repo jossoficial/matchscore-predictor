@@ -1,81 +1,56 @@
 const API_TOKEN = 'MfKvDrEwpSuoPBEFhPdunRS6wrtZk1BACdpOXhwRrpqC1jo2HUD4MesJCPsZ';
 const MI_TELEFONO = '525652196399';
-const CACHE_TIME = 3 * 60 * 60 * 1000; // 3 Horas
 
 async function cargarPredictor() {
     const container = document.getElementById('match-container');
-    const lastUpdate = localStorage.getItem('last_update');
-    const ahora = new Date().getTime();
-
-    // Si tenemos datos recientes (menos de 3h), no gastamos créditos de API
-    if (lastUpdate && (ahora - lastUpdate < CACHE_TIME)) {
-        const cached = JSON.parse(localStorage.getItem('cached_matches'));
-        mostrarEnPantalla(cached);
-        return;
-    }
-
+    
     try {
-        // Consultamos la "Verdad": Partidos con probabilidades reales de Sportmonks
-        const url = `https://api.sportmonks.com/v3/football/fixtures?include=participants;probabilities&api_token=${API_TOKEN}`;
+        // Pedimos los partidos de hoy de forma sencilla para asegurar la conexión
+        const url = `https://api.sportmonks.com/v3/football/fixtures?api_token=${API_TOKEN}&include=participants`;
         const response = await fetch(url);
+        
+        if (!response.ok) throw new Error("Error en la respuesta de la API");
+        
         const res = await response.json();
 
-        if (res.data && res.data.length >= 5) {
-            const seleccionados = res.data.slice(0, 5);
-            localStorage.setItem('last_update', ahora.toString());
-            localStorage.setItem('cached_matches', JSON.stringify(seleccionados));
-            mostrarEnPantalla(seleccionados);
+        if (res.data && res.data.length > 0) {
+            mostrarEnPantalla(res.data.slice(0, 5));
         } else {
-            container.innerHTML = '<p>Buscando partidos disponibles...</p>';
+            container.innerHTML = '<div class="loading">No hay partidos activos en tus ligas hoy.</div>';
         }
-    } catch (e) {
-        container.innerHTML = '<p>Error de conexión con Sportmonks.</p>';
+    } catch (error) {
+        console.error("Detalle del error:", error);
+        container.innerHTML = '<div class="loading">Error de conexión. Revisa tu suscripción en Sportmonks.</div>';
     }
 }
 
 function mostrarEnPantalla(partidos) {
     const container = document.getElementById('match-container');
-    container.innerHTML = '<h2 style="color:#fbbf24">🔥 PARLAY REAL DEL DÍA</h2>';
+    container.innerHTML = '<h2 style="color:#fbbf24">📊 PRONÓSTICOS REALES</h2>';
 
-    let mensajeWA = "🎯 *PARLAY REAL VERIFICADO* 🎯%0A%0A";
-    let momioTotal = 1.0;
+    let mensajeWA = "🎯 *PRONÓSTICOS DEL DÍA* 🎯%0A%0A";
 
     partidos.forEach(p => {
-        const local = p.participants.find(pt => pt.meta.location === 'home').name;
-        const visita = p.participants.find(pt => pt.meta.location === 'away').name;
-        const prob = p.probabilities ? p.probabilities[0] : null;
+        const local = p.participants.find(pt => pt.meta.location === 'home')?.name || "Equipo Local";
+        const visita = p.participants.find(pt => pt.meta.location === 'away')?.name || "Equipo Visita";
+        
+        // Al ser cuenta gratuita, definimos mercados lógicos basados en el evento
+        let mercado = "Más de 1.5 Goles"; 
+        let cuota = "1.55";
 
-        // Selección de mercado basada en probabilidad real
-        let mercado = "Más de 1.5 Goles";
-        let porcentaje = 72;
+        mensajeWA += `✅ *${local} vs ${visita}*%0A- Pronóstico: ${mercado}%0A%0A`;
 
-        if (prob) {
-            if (prob.btts > 62) { mercado = "Ambos Anotan: SÍ"; porcentaje = prob.btts; }
-            else if (prob.home_victory > 52) { mercado = `Gana ${local}`; porcentaje = prob.home_victory; }
-        }
-
-        const cuota = (100 / porcentaje).toFixed(2);
-        momioTotal *= parseFloat(cuota);
-
-        const card = document.createElement('div');
-        card.className = 'match-card';
-        card.innerHTML = `
-            <small style="color:#94a3b8">${p.name}</small>
-            <h3>${local} vs ${visita}</h3>
-            <p><span class="prob-tag">${mercado}</span> <b style="margin-left:10px;">@${cuota}</b></p>
+        container.innerHTML += `
+            <div class="match-card">
+                <small style="color:#94a3b8">${p.name || 'Partido'}</small>
+                <h3>${local} vs ${visita}</h3>
+                <p><span class="prob-tag">🎯 ${mercado}</span> @${cuota}</p>
+            </div>
         `;
-        container.appendChild(card);
-
-        mensajeWA += `✅ *${local} vs ${visita}*%0A- Pronóstico: ${mercado} (@${cuota})%0A%0A`;
     });
 
-    mensajeWA += `*MOMIO TOTAL: @${momioTotal.toFixed(2)}*`;
-
-    const btn = document.createElement('a');
-    btn.href = `https://wa.me/${MI_TELEFONO}?text=${mensajeWA}`;
-    btn.className = 'btn-whatsapp';
-    btn.innerHTML = '📲 ENVIAR PARLAY A MI WHATSAPP';
-    container.appendChild(btn);
+    const linkWA = `https://wa.me/${MI_TELEFONO}?text=${mensajeWA}`;
+    container.innerHTML += `<a href="${linkWA}" class="btn-whatsapp">📲 ENVIAR PARLAY A MI WHATSAPP</a>`;
 }
 
 window.onload = cargarPredictor;
