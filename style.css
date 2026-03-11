@@ -1,104 +1,55 @@
-/* Configuración General */
 body {
-    background-color: #0f172a; /* Azul muy oscuro */
+    background-color: #0f172a;
     color: #f1f5f9;
-    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-family: 'Segoe UI', Arial, sans-serif;
     margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    text-align: center;
 }
 
 header {
-    width: 100%;
-    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-    padding: 30px 0;
-    text-align: center;
-    border-bottom: 3px solid #fbbf24; /* Dorado Sportmonks */
-    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    background: #1e293b;
+    padding: 25px;
+    border-bottom: 4px solid #fbbf24;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
 }
 
-h1 { margin: 0; font-size: 1.8rem; color: #fbbf24; }
-header p { margin: 5px 0 0; color: #94a3b8; font-size: 0.9rem; }
-
-/* Contenedor Principal */
 #match-container {
-    width: 90%;
-    max-width: 500px;
-    padding: 20px 0;
+    width: 95%;
+    max-width: 450px;
+    margin: 20px auto;
 }
 
-/* Tarjetas de Partidos */
 .match-card {
     background: #1e293b;
-    border: 1px solid #334155;
     border-radius: 12px;
     padding: 15px;
     margin-bottom: 15px;
-    transition: transform 0.2s, box-shadow 0.2s;
-    position: relative;
-    overflow: hidden;
+    border-left: 5px solid #22c55e;
+    text-align: left;
 }
 
-.match-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.6);
-}
-
-.match-card h3 {
-    margin: 10px 0;
-    font-size: 1.1rem;
-    color: #fff;
-}
-
-/* Etiquetas de Probabilidad */
 .prob-tag {
-    background: rgba(34, 197, 94, 0.2);
     color: #4ade80;
-    padding: 4px 10px;
-    border-radius: 6px;
     font-weight: bold;
-    font-size: 0.85rem;
-}
-
-/* Botón de WhatsApp y Acción */
-.btn-action {
-    display: inline-block;
-    width: 100%;
-    padding: 15px;
-    margin-top: 10px;
-    border: none;
-    border-radius: 8px;
-    font-weight: bold;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: 0.3s;
-    text-align: center;
-    text-decoration: none;
+    background: rgba(74, 222, 128, 0.1);
+    padding: 3px 8px;
+    border-radius: 4px;
 }
 
 .btn-whatsapp {
-    background-color: #25d366;
+    display: block;
+    background: #25d366;
     color: white;
+    padding: 18px;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: bold;
+    margin-top: 25px;
+    font-size: 1.1rem;
 }
 
-.btn-whatsapp:hover {
-    background-color: #128c7e;
-}
-
-/* Animación de Carga */
 .loading {
-    text-align: center;
     padding: 50px;
     color: #fbbf24;
-    font-size: 1.2rem;
     font-weight: bold;
-    animation: pulse 1.5s infinite;
-}
-
-@keyframes pulse {
-    0% { opacity: 0.6; }
-    50% { opacity: 1; }
-    100% { opacity: 0.6; }
 }
