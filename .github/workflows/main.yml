@@ -1,0 +1,14 @@
+name: Enviar Parlay Automatico
+on:
+  schedule:
+    - cron: '0 */3 * * *' # Se ejecuta cada 3 horas exactamente
+  workflow_dispatch: # Permite ejecutarlo manualmente para probar
+
+jobs:
+  send_parlay:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ejecutar Script de Analisis
+        run: |
+          curl -X POST "https://api.sportmonks.com/v3/football/fixtures?include=participants;probabilities&api_token=MfKvDrEwpSuoPBEFhPdunRS6wrtZk1BACdpOXhwRrpqC1jo2HUD4MesJCPsZ" -o datos.json
+          # Aquí GitHub procesa los datos y envía el mensaje a través de un Bot de WhatsApp o Gateway
