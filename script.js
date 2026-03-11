@@ -1,91 +1,81 @@
 const API_TOKEN = 'MfKvDrEwpSuoPBEFhPdunRS6wrtZk1BACdpOXhwRrpqC1jo2HUD4MesJCPsZ';
-const MI_TELEFONO = '525652196399'; // Tu número configurado
+const MI_TELEFONO = '525652196399';
+const CACHE_TIME = 3 * 60 * 60 * 1000; // 3 Horas
 
-async function cargarDatosReales() {
+async function cargarPredictor() {
     const container = document.getElementById('match-container');
-    container.innerHTML = '<div class="loading">Consultando Mercados Reales...</div>';
+    const lastUpdate = localStorage.getItem('last_update');
+    const ahora = new Date().getTime();
+
+    // Si tenemos datos recientes (menos de 3h), no gastamos créditos de API
+    if (lastUpdate && (ahora - lastUpdate < CACHE_TIME)) {
+        const cached = JSON.parse(localStorage.getItem('cached_matches'));
+        mostrarEnPantalla(cached);
+        return;
+    }
 
     try {
-        // Consultamos partidos incluyendo participantes y probabilidades matemáticas de Sportmonks
+        // Consultamos la "Verdad": Partidos con probabilidades reales de Sportmonks
         const url = `https://api.sportmonks.com/v3/football/fixtures?include=participants;probabilities&api_token=${API_TOKEN}`;
-        
         const response = await fetch(url);
-        const json = await response.json();
-        
-        if (!json.data || json.data.length < 5) {
-            container.innerHTML = '<p>No hay suficientes partidos con datos reales hoy en tu plan.</p>';
-            return;
+        const res = await response.json();
+
+        if (res.data && res.data.length >= 5) {
+            const seleccionados = res.data.slice(0, 5);
+            localStorage.setItem('last_update', ahora.toString());
+            localStorage.setItem('cached_matches', JSON.stringify(seleccionados));
+            mostrarEnPantalla(seleccionados);
+        } else {
+            container.innerHTML = '<p>Buscando partidos disponibles...</p>';
         }
-
-        procesarYEnviar(json.data.slice(0, 5));
-
-    } catch (error) {
-        container.innerHTML = '<p>Error de conexión con la API.</p>';
+    } catch (e) {
+        container.innerHTML = '<p>Error de conexión con Sportmonks.</p>';
     }
 }
 
-function procesarYEnviar(partidos) {
+function mostrarEnPantalla(partidos) {
     const container = document.getElementById('match-container');
-    container.innerHTML = '<h2 style="color:#fbbf24">📊 PARLAY REAL GENERADO</h2>';
+    container.innerHTML = '<h2 style="color:#fbbf24">🔥 PARLAY REAL DEL DÍA</h2>';
 
-    let textoWhatsapp = "🎯 *NUEVO PARLAY REAL* 🎯%0A%0A";
-    let cuotaAcumulada = 1.0;
+    let mensajeWA = "🎯 *PARLAY REAL VERIFICADO* 🎯%0A%0A";
+    let momioTotal = 1.0;
 
-    partidos.forEach((p, index) => {
+    partidos.forEach(p => {
         const local = p.participants.find(pt => pt.meta.location === 'home').name;
         const visita = p.participants.find(pt => pt.meta.location === 'away').name;
-        
         const prob = p.probabilities ? p.probabilities[0] : null;
-        
-        // Selección de mercado basada en la probabilidad real más alta de la API
+
+        // Selección de mercado basada en probabilidad real
         let mercado = "Más de 1.5 Goles";
-        let porcentaje = 75;
+        let porcentaje = 72;
 
         if (prob) {
-            if (prob.btts > 65) {
-                mercado = "Ambos Anotan: SÍ";
-                porcentaje = prob.btts;
-            } else if (prob.home_victory > 55) {
-                mercado = `Gana ${local}`;
-                porcentaje = prob.home_victory;
-            } else if (prob.over_2_5 > 60) {
-                mercado = "Más de 2.5 Goles";
-                porcentaje = prob.over_2_5;
-            }
+            if (prob.btts > 62) { mercado = "Ambos Anotan: SÍ"; porcentaje = prob.btts; }
+            else if (prob.home_victory > 52) { mercado = `Gana ${local}`; porcentaje = prob.home_victory; }
         }
 
         const cuota = (100 / porcentaje).toFixed(2);
-        cuotaAcumulada *= parseFloat(cuota);
+        momioTotal *= parseFloat(cuota);
 
-        // Crear la tarjeta en la web
         const card = document.createElement('div');
         card.className = 'match-card';
         card.innerHTML = `
-            <div style="font-size:0.7rem; color:#94a3b8;">${p.name}</div>
+            <small style="color:#94a3b8">${p.name}</small>
             <h3>${local} vs ${visita}</h3>
-            <p><span class="prob-tag">🎯 ${mercado}</span> <span style="margin-left:10px;">@${cuota}</span></p>
+            <p><span class="prob-tag">${mercado}</span> <b style="margin-left:10px;">@${cuota}</b></p>
         `;
         container.appendChild(card);
 
-        // Formatear mensaje para WhatsApp
-        textoWhatsapp += `✅ *${local} vs ${visita}*%0A- Pronóstico: ${mercado}%0A- Cuota: @${cuota}%0A%0A`;
+        mensajeWA += `✅ *${local} vs ${visita}*%0A- Pronóstico: ${mercado} (@${cuota})%0A%0A`;
     });
 
-    textoWhatsapp += `*MOMIO TOTAL: @${cuotaAcumulada.toFixed(2)}*%0A%0A_Enviado desde mi Predictor GitHub_`;
+    mensajeWA += `*MOMIO TOTAL: @${momioTotal.toFixed(2)}*`;
 
-    // Botón de acción real
-    const linkWA = `https://wa.me/${MI_TELEFONO}?text=${textoWhatsapp}`;
-    
     const btn = document.createElement('a');
-    btn.href = linkWA;
-    btn.target = "_blank";
-    btn.className = "btn-action btn-whatsapp";
-    btn.style.display = "block";
-    btn.style.marginTop = "20px";
-    btn.style.textDecoration = "none";
-    btn.innerHTML = "📲 ENVIAR PARLAY A MI WHATSAPP";
-    
+    btn.href = `https://wa.me/${MI_TELEFONO}?text=${mensajeWA}`;
+    btn.className = 'btn-whatsapp';
+    btn.innerHTML = '📲 ENVIAR PARLAY A MI WHATSAPP';
     container.appendChild(btn);
 }
 
-window.onload = cargarDatosReales;
+window.onload = cargarPredictor;
