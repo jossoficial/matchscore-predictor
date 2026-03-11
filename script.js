@@ -1,7 +1,7 @@
 const API_TOKEN = 'MfKvDrEwpSuoPBEFhPdunRS6wrtZk1BACdpOXhwRrpqC1jo2HUD4MesJCPsZ';
 const MI_TELEFONO = '525652196399';
 
-// IDs de las ligas más importantes (Premier, LaLiga, Champions, Liga MX, etc.)
+// IDs de las 10 ligas más importantes (incluida Liga MX)
 const LIGAS_TOP = [8, 564, 301, 271, 501, 2, 3, 5, 24, 609]; 
 
 async function cargarPredictor() {
@@ -9,63 +9,62 @@ async function cargarPredictor() {
     const hoy = new Date().toISOString().split('T')[0];
 
     try {
-        // Pedimos partidos de hoy con equipos y probabilidades
-        const url = `https://api.sportmonks.com/v3/football/fixtures/date/${hoy}?api_token=${API_TOKEN}&include=participants;probabilities;league`;
+        // Usamos un proxy para evitar el "Error de conexión" (CORS)
+        const proxy = "https://corsproxy.io/?";
+        const urlBase = `https://api.sportmonks.com/v3/football/fixtures/date/${hoy}?api_token=${API_TOKEN}&include=participants;probabilities;league`;
         
-        const response = await fetch(url);
+        const response = await fetch(proxy + encodeURIComponent(urlBase));
         const res = await response.json();
 
         if (res.data && res.data.length > 0) {
-            // FILTRO: Solo partidos que pertenezcan a nuestras ligas importantes
-            const partidosImportantes = res.data.filter(p => 
+            // Filtramos por las ligas top y que tengan equipos
+            const filtrados = res.data.filter(p => 
                 LIGAS_TOP.includes(p.league_id) && 
                 p.participants && p.participants.length >= 2
             );
 
-            // Si no hay de las TOP, mostramos los 10 con mayor probabilidad de éxito
-            const finales = partidosImportantes.length > 0 ? partidosImportantes : res.data.slice(0, 10);
-            
-            mostrarEnPantalla(finales.slice(0, 10));
+            // Si hay partidos top los mostramos, si no, los 10 mejores del día
+            const mostrar = filtrados.length > 0 ? filtrados : res.data.slice(0, 10);
+            generarInterfaz(mostrar.slice(0, 10));
         } else {
-            container.innerHTML = `<div class="loading">No hay partidos importantes hoy (${hoy}).</div>`;
+            container.innerHTML = `<div class="loading">No hay partidos importantes para hoy (${hoy}).</div>`;
         }
     } catch (error) {
         console.error(error);
-        container.innerHTML = '<div class="loading">Error de conexión. Revisa tu Token.</div>';
+        container.innerHTML = '<div class="loading">Error de señal. Reintentando...</div>';
+        // Reintento automático en 5 segundos si falla
+        setTimeout(cargarPredictor, 5000);
     }
 }
 
-function mostrarEnPantalla(partidos) {
+function generarInterfaz(partidos) {
     const container = document.getElementById('match-container');
-    container.innerHTML = '<h2 style="color:#fbbf24">🔝 TOP 10 PARLAY REAL</h2>';
+    container.innerHTML = '<h2 style="color:#fbbf24">🔝 TOP 10 - DATOS REALES</h2>';
 
-    let mensajeWA = "🎯 *PARLAY TOP 10 (DATOS REALES)* 🎯%0A%0A";
+    let mensajeWA = "🎯 *PARLAY TOP 10 REAL* 🎯%0A%0A";
     let momioTotal = 1.0;
 
     partidos.forEach((p, index) => {
         const local = p.participants.find(pt => pt.meta.location === 'home')?.name || "Local";
         const visita = p.participants.find(pt => pt.meta.location === 'away')?.name || "Visita";
-        const nombreLiga = p.league?.name || "Fútbol";
-        
-        const prob = (p.probabilities && p.probabilities.length > 0) ? p.probabilities[0] : null;
+        const liga = p.league?.name || "Fútbol";
+        const prob = p.probabilities?.[0];
 
-        // Lógica de mercado real
+        // Análisis de mercado real
         let mercado = "Más de 1.5 Goles";
-        let porcentaje = 75;
+        let cuota = 1.40;
 
         if (prob) {
-            if (prob.btts > 65) { mercado = "Ambos Anotan"; porcentaje = prob.btts; }
-            else if (prob.home_victory > 55) { mercado = `Gana ${local}`; porcentaje = prob.home_victory; }
+            if (prob.btts > 65) { mercado = "Ambos Anotan"; cuota = (100/prob.btts).toFixed(2); }
+            else if (prob.home_victory > 55) { mercado = `Gana ${local}`; cuota = (100/prob.home_victory).toFixed(2); }
         }
 
-        const cuota = (100 / porcentaje).toFixed(2);
         momioTotal *= parseFloat(cuota);
-
         mensajeWA += `${index + 1}. *${local} vs ${visita}*%0A   ${mercado} (@${cuota})%0A%0A`;
 
         container.innerHTML += `
             <div class="match-card">
-                <div style="font-size:0.7rem; color:#fbbf24; font-weight:bold;">🏆 ${nombreLiga}</div>
+                <div style="font-size:0.7rem; color:#fbbf24;">🏆 ${liga}</div>
                 <h3>${local} vs ${visita}</h3>
                 <p><span class="prob-tag">🎯 ${mercado}</span> <b>@${cuota}</b></p>
             </div>
@@ -77,7 +76,7 @@ function mostrarEnPantalla(partidos) {
     const btn = document.createElement('a');
     btn.href = `https://wa.me/${MI_TELEFONO}?text=${mensajeWA}`;
     btn.className = "btn-whatsapp";
-    btn.innerHTML = "📲 ENVIAR TOP 10 A MI WHATSAPP";
+    btn.innerHTML = "📲 ENVIAR TOP 10 A WHATSAPP";
     container.appendChild(btn);
 }
 
